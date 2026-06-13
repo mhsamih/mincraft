@@ -14,6 +14,7 @@ import {
   updateNameTag,
 } from "./character.js";
 import { BLOCK_NAMES, BLOCK_TYPES, BLOCK_ID } from "./textures.js";
+import { Sound, unlockAudio } from "./sound.js";
 
 // --- Renderer / scene --------------------------------------------------------
 const canvas = document.getElementById("game-canvas");
@@ -36,6 +37,7 @@ scene.add(sun);
 const world = new World(scene);
 const myColor = new THREE.Color().setHSL(Math.random(), 0.6, 0.55).getHex();
 let player = new Player(scene, camera, world, myColor);
+player.sfx = { jump: Sound.jump, step: Sound.step, death: Sound.death };
 const weapon = new Weapon(scene, camera);
 
 // Remote players: id -> { group, hitbox, tag, target, hp, name }
@@ -97,7 +99,10 @@ const net = new Network({
     if (d.id === net.id) {
       const dmg = player.hp - d.hp;
       player.hp = d.hp;
-      if (dmg > 0) flashDamage();
+      if (dmg > 0) {
+        flashDamage();
+        Sound.hurt();
+      }
       if (player.hp <= 0) player.die();
     } else {
       const r = remotes.get(d.id);
@@ -203,7 +208,10 @@ window.addEventListener("keydown", (e) => {
     const n = parseInt(e.code.slice(5), 10) - 1;
     if (n >= 0 && n < BLOCK_NAMES.length) selectSlot(n);
   }
-  if (e.code === "KeyR") weapon.reload();
+  if (e.code === "KeyR") {
+    if (!weapon.reloading && weapon.ammo < GUN.magSize) Sound.reload();
+    weapon.reload();
+  }
   if (e.code === "F5") {
     e.preventDefault();
     player.toggleView();
@@ -214,7 +222,10 @@ window.addEventListener("keyup", (e) => (keys[e.code] = false));
 
 const overlay = document.getElementById("overlay");
 const playButton = document.getElementById("play-button");
-playButton.addEventListener("click", () => canvas.requestPointerLock());
+playButton.addEventListener("click", () => {
+  unlockAudio();
+  canvas.requestPointerLock();
+});
 document.addEventListener("pointerlockchange", () => {
   const locked = document.pointerLockElement === canvas;
   overlay.classList.toggle("hidden", locked);
@@ -263,10 +274,12 @@ function fire() {
   camera.getWorldDirection(dir);
 
   const hit = weapon.shoot(world, targets);
+  Sound.shoot();
   net.sendShoot(origin, dir);
   if (hit) {
     net.sendHit(hit.id, GUN.damage);
     showHitmarker();
+    Sound.hitMark();
   }
 }
 
@@ -283,6 +296,7 @@ function placeBlock() {
   if (Math.abs(dx) < 0.8 && Math.abs(dz) < 0.8 && Math.abs(dy) < 1.2) return;
   const type = BLOCK_NAMES[selectedSlot];
   world.addBlock(p.x, p.y, p.z, type);
+  Sound.place();
   net.sendBlockEdit("add", p.x, p.y, p.z, selectedSlot);
 }
 
@@ -292,6 +306,7 @@ function breakBlock() {
   if (!target) return;
   const b = target.block;
   world.removeBlock(b.x, b.y, b.z);
+  Sound.breakBlock();
   net.sendBlockEdit("remove", b.x, b.y, b.z, 0);
 }
 
@@ -382,6 +397,13 @@ function animate(now) {
     net.sendState(player.getState());
   } else {
     player.update(dt, {}); // keep camera/gravity sane while paused
+  }
+
+  // Smooth FOV kick while sprinting for a sense of speed.
+  const targetFov = player.sprinting && player.speed2d > 1 ? 82 : 75;
+  if (Math.abs(camera.fov - targetFov) > 0.1) {
+    camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 8);
+    camera.updateProjectionMatrix();
   }
 
   weapon.update(dt);

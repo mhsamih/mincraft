@@ -119,35 +119,52 @@ export class World {
   }
 
   _growTree(x, y, z) {
-    const trunk = 4;
+    // Trunk height varies a little for a more natural forest.
+    const trunk = 4 + Math.floor(hash2(x, z, this.seed ^ 0x55) * 3); // 4..6
     for (let i = 0; i < trunk; i++) this.addBlock(x, y + i, z, "log");
     const topY = y + trunk;
-    for (let dx = -2; dx <= 2; dx++) {
-      for (let dz = -2; dz <= 2; dz++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          if (Math.abs(dx) + Math.abs(dz) + Math.abs(dy) > 3) continue;
-          if (dx === 0 && dz === 0 && dy < 1) continue;
-          this.addBlock(x + dx, topY + dy, z + dz, "leaves");
+
+    // Full leaf canopy: two wide 5x5 layers, then a tighter 3x3, then a cap —
+    // closer to the dense oak canopies in the reference screenshots.
+    const layer = (cy, radius, skipCorners) => {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+          if (dx === 0 && dz === 0 && cy < topY) continue; // keep trunk clear
+          if (skipCorners && Math.abs(dx) === radius && Math.abs(dz) === radius) {
+            // Randomly trim corners so the canopy isn't a perfect square.
+            if (hash2(x + dx, z + dz, this.seed ^ cy) < 0.5) continue;
+          }
+          this.addBlock(x + dx, cy, z + dz, "leaves");
         }
       }
-    }
+    };
+    layer(topY - 2, 2, true);
+    layer(topY - 1, 2, true);
+    layer(topY, 1, false);
+    this.addBlock(x, topY + 1, z, "leaves");
   }
 
   // --- Sky: gradient backdrop, water plane, drifting clouds ------------------
   _buildSky() {
     const R = WORLD_RADIUS;
 
-    // Translucent water plane across the whole map.
-    const waterGeo = new THREE.PlaneGeometry((R + 1) * 2, (R + 1) * 2);
+    // Translucent, gently rippling water plane across the whole map. The plane
+    // is subdivided so we can animate small waves in update().
+    const seg = 40;
+    const waterGeo = new THREE.PlaneGeometry((R + 1) * 2, (R + 1) * 2, seg, seg);
     waterGeo.rotateX(-Math.PI / 2);
     const waterMat = new THREE.MeshLambertMaterial({
-      color: 0x3a6ea5,
+      color: 0x2f78c4,
       transparent: true,
       opacity: 0.72,
     });
     this.water = new THREE.Mesh(waterGeo, waterMat);
     this.water.position.set(0, WATER_LEVEL + 0.85, 0);
     this.scene.add(this.water);
+    // Cache the flat baseline so waves are applied relative to it each frame.
+    this.waterBaseY = Float32Array.from(
+      waterGeo.attributes.position.array
+    );
 
     // A few blocky clouds that drift slowly.
     this.clouds = new THREE.Group();
@@ -177,9 +194,17 @@ export class World {
       c.position.x += dt * 1.2;
       if (c.position.x > R * 1.5) c.position.x = -R * 1.5;
     }
-    // Gentle water bob.
-    this.water.position.y =
-      WATER_LEVEL + 0.85 + Math.sin(performance.now() * 0.001) * 0.05;
+    // Ripple the water surface by displacing its vertices around the baseline.
+    const t = performance.now() * 0.0012;
+    const pos = this.water.geometry.attributes.position;
+    const base = this.waterBaseY;
+    for (let i = 0; i < pos.count; i++) {
+      const x = base[i * 3];
+      const z = base[i * 3 + 2];
+      pos.array[i * 3 + 1] =
+        Math.sin(x * 0.25 + t * 2) * 0.06 + Math.cos(z * 0.3 + t * 1.6) * 0.05;
+    }
+    pos.needsUpdate = true;
   }
 
   // Raycast helper: returns { block:{x,y,z}, place:{x,y,z} } or null.

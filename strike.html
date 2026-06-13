@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MiniCraft — Strike Mode</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <a id="back-to-modes" href="index.html">← Modes</a>
+
+    <!-- Crosshair + hitmarker -->
+    <div id="crosshair">+</div>
+    <div id="hitmarker">✕</div>
+    <div id="damage-flash"></div>
+
+    <!-- Top-left debug HUD -->
+    <div id="hud">
+      <div id="fps">FPS: 0</div>
+      <div id="position">XYZ: 0, 0, 0</div>
+      <div id="net-status">Connecting…</div>
+      <div id="view-mode">1st person</div>
+    </div>
+
+    <!-- Scoreboard (top-right) -->
+    <div id="scoreboard"></div>
+
+    <!-- Kill feed -->
+    <div id="killfeed"></div>
+
+    <!-- Bottom HUD: health, ammo, hotbar -->
+    <div id="bottom-hud">
+      <div id="health-bar"><div id="health-fill"></div></div>
+      <div id="hotbar"></div>
+      <div id="ammo">30 / 30</div>
+    </div>
+
+    <!-- Respawn overlay -->
+    <div id="respawn" class="hidden">
+      <div class="panel">
+        <h2>You died</h2>
+        <p>Respawning…</p>
+        <button id="respawn-btn">Respawn</button>
+      </div>
+    </div>
+
+    <!-- Start / pause overlay -->
+    <div id="overlay">
+      <div class="panel">
+        <h1>Strike Mode</h1>
+        <p class="subtitle">Voxel shooter · Three.js + Socket.IO multiplayer</p>
+        <button id="play-button">Click to Play</button>
+        <div class="controls">
+          <h3>Controls</h3>
+          <ul>
+            <li><b>W A S D</b> Move</li>
+            <li><b>Mouse</b> Look</li>
+            <li><b>Space</b> Jump</li>
+            <li><b>Shift</b> Sprint</li>
+            <li><b>Left Click</b> Shoot</li>
+            <li><b>R</b> Reload</li>
+            <li><b>Right Click</b> Place block</li>
+            <li><b>B</b> Break block</li>
+            <li><b>1 – 8 / Scroll</b> Select block</li>
+            <li><b>F5</b> Toggle 1st / 3rd person</li>
+            <li><b>Esc</b> Pause</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+  <script type="module" src="src/game.js"></script>
+</body>
+</html>
