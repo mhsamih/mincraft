@@ -25,7 +25,23 @@
       <div id="hotbar"></div>
     </div>
 
-    <div id="overlay">
+    <!-- World creation menu (shown first) -->
+    <div id="creation">
+      <div class="panel">
+        <h1>Create New World</h1>
+        <p class="subtitle">Choose your world, then build</p>
+        <div class="create-options">
+          <button class="opt" id="opt-type" data-on="true">World Type: Normal</button>
+          <button class="opt" id="opt-trees" data-on="true">Trees: On</button>
+          <button class="opt" id="opt-caves" data-on="true">Caves: On</button>
+          <button class="opt" id="opt-seed">New Seed 🎲</button>
+        </div>
+        <button id="create-button">Create New World</button>
+      </div>
+    </div>
+
+    <!-- Click to play (shown after a world is created) -->
+    <div id="overlay" class="hidden">
       <div class="panel">
         <h1>Classic Mode</h1>
         <p class="subtitle">Build &amp; break · Three.js sandbox</p>

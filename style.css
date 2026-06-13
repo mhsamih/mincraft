@@ -206,9 +206,10 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Overlays (start, pause, respawn) */
+/* Overlays (start, pause, respawn, creation) */
 #overlay,
-#respawn {
+#respawn,
+#creation {
   position: absolute;
   inset: 0;
   display: flex;
@@ -219,8 +220,49 @@ body {
   z-index: 10;
 }
 #overlay.hidden,
-#respawn.hidden {
+#respawn.hidden,
+#creation.hidden {
   display: none;
+}
+
+/* World-creation menu (Classic mode) */
+.create-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0 22px;
+}
+.create-options .opt {
+  background: #6a6a6a;
+  color: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.4);
+  padding: 11px 16px;
+  font-size: 16px;
+  font-family: monospace;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.create-options .opt:hover {
+  background: #7c7c7c;
+  border-color: #fff;
+}
+.create-options .opt[data-on="false"] {
+  background: #4a4a4a;
+  opacity: 0.85;
+}
+#create-button {
+  background: #2e7d32;
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+#create-button:hover {
+  background: #379a3e;
 }
 
 .panel {

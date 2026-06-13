@@ -28,8 +28,6 @@ const sun = new THREE.DirectionalLight(0xffffff, 0.7);
 sun.position.set(30, 60, 20);
 scene.add(sun);
 
-world.generate(world.seed);
-
 const player = new Player(scene, camera, world, 0x9acd32);
 player.sfx = { jump: Sound.jump, step: Sound.step };
 
@@ -107,7 +105,41 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => (keys[e.code] = false));
 
+// --- World creation menu -----------------------------------------------------
+const creation = document.getElementById("creation");
 const overlay = document.getElementById("overlay");
+const opts = { type: true, trees: true, caves: true, seed: (Math.random() * 1e9) | 0 };
+
+// Each toggle button flips its state and updates its own label.
+function bindToggle(id, key, onLabel, offLabel) {
+  const btn = document.getElementById(id);
+  btn.addEventListener("click", () => {
+    opts[key] = !opts[key];
+    btn.dataset.on = opts[key];
+    btn.textContent = opts[key] ? onLabel : offLabel;
+  });
+}
+bindToggle("opt-type", "type", "World Type: Normal", "World Type: Superflat");
+bindToggle("opt-trees", "trees", "Trees: On", "Trees: Off");
+bindToggle("opt-caves", "caves", "Caves: On", "Caves: Off");
+document.getElementById("opt-seed").addEventListener("click", () => {
+  opts.seed = (Math.random() * 1e9) | 0;
+});
+
+let started = false;
+document.getElementById("create-button").addEventListener("click", () => {
+  world.seed = opts.seed;
+  world.generate(opts.seed, {
+    superflat: !opts.type, // "type" true = Normal, false = Superflat
+    trees: opts.trees,
+    caves: opts.caves,
+  });
+  player.respawn();
+  started = true;
+  creation.classList.add("hidden");
+  overlay.classList.remove("hidden");
+});
+
 const playButton = document.getElementById("play-button");
 playButton.addEventListener("click", () => {
   unlockAudio();
@@ -177,6 +209,13 @@ function animate(now) {
   let dt = (now - last) / 1000;
   last = now;
   if (dt > 0.1) dt = 0.1;
+
+  // Don't simulate until a world has been created.
+  if (!started) {
+    world.update(dt);
+    renderer.render(scene, camera);
+    return;
+  }
 
   const playing = document.pointerLockElement === canvas;
   player.update(dt, playing ? keys : {});
