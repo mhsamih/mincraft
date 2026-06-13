@@ -1,67 +1,115 @@
-# MiniCraft 🧱
+# MiniCraft 🧱🔫
 
-A small **Minecraft-style voxel game** built with plain **HTML + JavaScript + Three.js** — no build step required. Designed to be dropped into a website as a tab/iframe (and later ported to React for a Next.js app).
+A **Minecraft-style voxel shooter** built with **Three.js** + **Socket.IO** multiplayer.
+Big open map, a visible player character, first/third-person camera, and hitscan
+gun combat against **real players**. No build step for the client; the server is a
+small Node app that also hosts the files.
 
-## Play it
+---
 
-Because it uses ES modules + an import map, it must be served over HTTP (not opened as a `file://`):
+## Quick start (with multiplayer)
 
 ```bash
-# any static server works, e.g.:
-npx serve .
-# or
-python3 -m http.server 8000
+npm install
+npm start
 ```
 
-Then open the printed URL and click **Play**.
+Then open **http://localhost:3000** in two browser tabs/devices and click **Play**.
+Both clients share the same seeded world and can shoot each other.
+
+> The server also serves the static files, so this is all you need.
+
+## Play the client alone (no server)
+
+The client degrades gracefully to **solo/offline** if no server is reachable —
+just serve the folder statically:
+
+```bash
+npx serve .          # then open the printed URL
+```
+
+## Connect to a remote server
+
+```
+index.html?server=https://your-server-host:3000
+```
+
+---
 
 ## Controls
 
-| Action            | Key                       |
-| ----------------- | ------------------------- |
-| Move              | `W` `A` `S` `D`           |
-| Look              | Mouse                     |
-| Jump              | `Space`                   |
-| Break block       | Left click                |
-| Place block       | Right click               |
-| Select block      | `1`–`6` or scroll wheel   |
-| Pause             | `Esc`                     |
+| Action | Key |
+| --- | --- |
+| Move | `W` `A` `S` `D` |
+| Look | Mouse |
+| Jump | `Space` |
+| **Shoot** | Left click (hold to auto-fire) |
+| Reload | `R` |
+| Place block | Right click |
+| Break block | `B` |
+| Select block | `1`–`8` or scroll |
+| Toggle 1st/3rd person | `F5` |
+| Pause | `Esc` |
+
+---
 
 ## Features
 
-- Procedurally generated rolling terrain with trees
-- 6 block types (grass, dirt, stone, wood, leaves, sand)
-- Break & place blocks via raycasting from the crosshair
-- First-person controller with gravity, jumping, and AABB collision
-- Hotbar UI, FPS + position HUD
-- Fully self-contained in three files
+- **Big procedural map** (seeded so every player sees the same world) with water,
+  beaches, forests, and drifting clouds.
+- **Procedurally-generated pixel textures** — authentic Minecraft look with zero
+  image assets (drawn to canvas, idea borrowed from the *Minecraft JS Edition*
+  CodePen).
+- **Instanced rendering** — one draw call per block type, so a large world stays
+  fast.
+- **Visible character** with limb animation; toggle first/third person.
+- **Hitscan gun combat** — tracers, muzzle flash, recoil, ammo + reload, hitmarker.
+- **Real-time multiplayer (Socket.IO)** — player sync, PvP damage, kill feed,
+  scoreboard, respawns, and synced block edits.
 
-## Files
+---
 
-| File         | Purpose                                  |
-| ------------ | ---------------------------------------- |
-| `index.html` | Markup, HUD, hotbar, Three.js import map |
-| `style.css`  | Layout and UI styling                    |
-| `game.js`    | The game engine (world, physics, input)  |
+## Project layout
 
-## Embedding in your site
-
-The whole game lives inside `#game-container`, so the simplest integration is an iframe:
-
-```html
-<iframe src="/minicraft/index.html" style="width:100%;height:600px;border:0"></iframe>
+```
+index.html        markup, HUD, import map, socket.io script
+style.css         HUD + UI styling
+server.js         Express + Socket.IO server (also serves the files)
+package.json      server deps + npm start
+src/
+  game.js         main controller: loop, input, HUD, network glue
+  world.js        instanced voxel world, terrain, water, clouds
+  textures.js     procedural canvas textures + block definitions
+  noise.js        deterministic seeded noise + RNG
+  character.js    blocky humanoid model + name tags
+  weapons.js      gun view-model, hitscan shooting, tracers
+  player.js       local player physics + first/third-person camera
+  network.js      Socket.IO client wrapper (offline fallback)
 ```
 
-## Roadmap / integration with your stack
+---
 
-This prototype is intentionally framework-agnostic. To fit your existing
-**TypeScript monorepo** (Next.js 14 / React 18 / NestJS / Socket.IO / Prisma):
+## Wiring into your stack (Next.js + NestJS + Socket.IO + Prisma)
 
-- **Next.js (`apps/web`)** — wrap `game.js` as a client component (`"use client"`),
-  mounting the canvas in a `useEffect` and cleaning up on unmount.
-- **Multiplayer** — emit block break/place events over **Socket.IO** and broadcast
-  them so multiple players share one world.
-- **Persistence** — store the block edits in **PostgreSQL** via **Prisma** so worlds
-  survive a refresh.
+This prototype is structured to drop into your TypeScript monorepo:
 
-These are the "logic" pieces we can build out next.
+- **Frontend (`apps/web`, Next.js 14):** wrap `src/game.js` as a `"use client"`
+  component that mounts the canvas in `useEffect` and disposes the renderer on
+  unmount. The whole UI lives inside `#game-container`, so it can be a tab.
+- **Backend (`apps/api`, NestJS 10):** the protocol in `network.js` / `server.js`
+  maps 1:1 onto a `@WebSocketGateway`. Each `socket.on(event)` becomes a
+  `@SubscribeMessage(event)` handler; `io.emit` becomes `server.emit`.
+
+  | Client → Server | Server → Client |
+  | --- | --- |
+  | `join`, `state`, `shoot`, `hit`, `blockEdit` | `init`, `playerJoined`, `playerLeft`, `playerState`, `tracer`, `health`, `death`, `respawn`, `blockEdit`, `scoreboard` |
+
+- **Persistence (Prisma + PostgreSQL):** store `blockEdit`s and per-player kills so
+  worlds and stats survive restarts. The server already keeps an ordered
+  `blockEdits` log that late joiners replay — swap that array for a Prisma table.
+
+### Security note for a real deployment
+
+This reference server trusts client-reported hits (fine for a prototype/LAN). For
+a public game, move hit validation server-side (the server already relays shots),
+and add auth (your JWT) to the socket handshake.

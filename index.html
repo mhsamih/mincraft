@@ -3,49 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>MiniCraft — A Minecraft-style Voxel Game</title>
+  <title>MiniCraft — Voxel Shooter</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- The whole game lives inside this wrapper so it can be embedded as a tab/iframe -->
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
 
-    <!-- Crosshair in the middle of the screen -->
+    <!-- Crosshair + hitmarker -->
     <div id="crosshair">+</div>
+    <div id="hitmarker">✕</div>
+    <div id="damage-flash"></div>
 
-    <!-- On-screen heads-up display -->
+    <!-- Top-left debug HUD -->
     <div id="hud">
       <div id="fps">FPS: 0</div>
       <div id="position">XYZ: 0, 0, 0</div>
+      <div id="net-status">Connecting…</div>
+      <div id="view-mode">1st person</div>
     </div>
 
-    <!-- Hotbar to select which block to place -->
-    <div id="hotbar"></div>
+    <!-- Scoreboard (top-right) -->
+    <div id="scoreboard"></div>
+
+    <!-- Kill feed (under scoreboard) -->
+    <div id="killfeed"></div>
+
+    <!-- Bottom HUD: health, ammo, hotbar -->
+    <div id="bottom-hud">
+      <div id="health-bar"><div id="health-fill"></div></div>
+      <div id="hotbar"></div>
+      <div id="ammo">30 / 30</div>
+    </div>
+
+    <!-- Respawn overlay -->
+    <div id="respawn" class="hidden">
+      <div class="panel">
+        <h2>You died</h2>
+        <p>Respawning…</p>
+        <button id="respawn-btn">Respawn</button>
+      </div>
+    </div>
 
     <!-- Start / pause overlay -->
     <div id="overlay">
       <div class="panel">
         <h1>MiniCraft</h1>
-        <p class="subtitle">A Minecraft-style voxel game built with Three.js</p>
+        <p class="subtitle">Voxel shooter · Three.js + Socket.IO multiplayer</p>
         <button id="play-button">Click to Play</button>
         <div class="controls">
           <h3>Controls</h3>
           <ul>
-            <li><b>W A S D</b> — Move</li>
-            <li><b>Mouse</b> — Look around</li>
-            <li><b>Space</b> — Jump</li>
-            <li><b>Left Click</b> — Break block</li>
-            <li><b>Right Click</b> — Place block</li>
-            <li><b>1 – 6</b> or <b>Scroll</b> — Select block</li>
-            <li><b>Esc</b> — Pause</li>
+            <li><b>W A S D</b> Move</li>
+            <li><b>Mouse</b> Look</li>
+            <li><b>Space</b> Jump</li>
+            <li><b>Left Click</b> Shoot</li>
+            <li><b>R</b> Reload</li>
+            <li><b>Right Click</b> Place block</li>
+            <li><b>B</b> Break block</li>
+            <li><b>1 – 8 / Scroll</b> Select block</li>
+            <li><b>F5</b> Toggle 1st / 3rd person</li>
+            <li><b>Esc</b> Pause</li>
           </ul>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Three.js loaded from a CDN via import map (no build step needed) -->
+  <!-- Socket.IO client (provides the global `io`). If the server is on the same
+       origin this connects automatically; otherwise pass ?server=URL. -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <!-- Three.js via import map (no build step). -->
   <script type="importmap">
   {
     "imports": {
@@ -53,6 +82,6 @@
     }
   }
   </script>
-  <script type="module" src="game.js"></script>
+  <script type="module" src="src/game.js"></script>
 </body>
 </html>

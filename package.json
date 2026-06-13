@@ -1,0 +1,14 @@
+{
+  "name": "minicraft",
+  "version": "0.2.0",
+  "description": "A Minecraft-style voxel shooter with Three.js and Socket.IO multiplayer.",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
