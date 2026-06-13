@@ -16,6 +16,7 @@ const SPRINT_SPEED = 7.6;
 const GROUND_ACCEL = 55; // how quickly we reach target velocity on ground
 const AIR_ACCEL = 10; // limited air control
 const GROUND_FRICTION = 10; // deceleration when not pressing keys
+const FLY_SPEED = 9; // vertical speed in creative flight
 
 export class Player {
   constructor(scene, camera, world, color) {
@@ -33,6 +34,7 @@ export class Player {
     this.hp = 100;
     this.dead = false;
     this.firstPerson = true;
+    this.flying = false; // creative flight (Classic mode)
 
     this.speed2d = 0;
     this.bobPhase = 0;
@@ -96,12 +98,20 @@ export class Player {
       this.vel.z *= f;
     }
 
-    // Gravity + jump.
-    this.vel.y -= GRAVITY * dt;
-    if (keys["Space"] && this.onGround) {
-      this.vel.y = JUMP;
-      this.onGround = false;
-      this.sfx.jump && this.sfx.jump();
+    if (this.flying) {
+      // Direct vertical control, no gravity (creative building).
+      let vy = 0;
+      if (keys["Space"]) vy += 1;
+      if (keys["ShiftLeft"] || keys["ShiftRight"]) vy -= 1;
+      this.vel.y = vy * FLY_SPEED;
+    } else {
+      // Gravity + jump.
+      this.vel.y -= GRAVITY * dt;
+      if (keys["Space"] && this.onGround) {
+        this.vel.y = JUMP;
+        this.onGround = false;
+        this.sfx.jump && this.sfx.jump();
+      }
     }
 
     // Move and resolve collisions per axis.
@@ -125,7 +135,7 @@ export class Player {
       this.vel.y = 0;
     }
 
-    if (p.y < -20) this.die();
+    if (!this.flying && p.y < -20) this.die();
 
     this.speed2d = Math.hypot(this.vel.x, this.vel.z);
 

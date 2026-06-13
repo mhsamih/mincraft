@@ -1,203 +1,61 @@
 <!DOCTYPE html>
-<html><head>
-		<meta charset="utf-8">
-		<title>Minecraft Javascript Edition</title>
-		<link id="vtfont" href="https://fonts.googleapis.com/css2?family=VT323&amp;display=swap" rel="stylesheet">
-	<style>
-		body {
-			overflow: hidden; /* Hide scrollbars */
-		}
-		.world-select {
-			width: 99vw;
-			min-width: 300px;
-			height: calc(100vh - 220px);
-			position: absolute;
-			bottom: 120px;
-			overflow-y: auto;
-			background-color: RGBA(0, 0, 0, 0.6);
-			justify-content: center;
-			margin: 0 auto;
-		}
-		.world {
-			width: 250px;
-			height: auto;
-			border: 1px solid black;
-			font-size: 18px;
-			font-family: 'Courier New', Courier, monospace;
-			color: rgb(180, 180, 180);
-			margin: 0 auto;
-			margin-top: 15px;
-			padding: 5px;
-			cursor: pointer;
-		}
-		strong {
-			color: white;
-		}
-		.selected {
-			border: 3px solid white;
-			padding: 3px;
-		}
-		input[type=text] {
-			background-color: black;
-			caret-color: white;
-			border: 2px solid gray;
-			color: white;
-			font-size: 24px;
-			padding-left: 12px;
-		}
-		input[type=text]:focus {
-			border: 2px solid lightgray;
-		}
-		#boxcentertop {
-			z-index: 1;
-			width: 80vw;
-			max-width: 400px;
-			height: 50px;
-			position: relative;
-			top: 30px;
-			display: block;
-			margin: 0 auto;
-		}
-		.hidden {
-			display: none !important;
-		}
-		#onhover {
-			background-color: rgba(0, 0, 0, 0.9);
-			color: rgb(200, 200, 200);
-			font-family: 'Courier New', Courier, monospace;
-			word-wrap: normal;
-			width: auto;
-			max-width: 400px;
-			position: absolute;
-			z-index: 1;
-			padding: 10px;
-			cursor: default;
-		}
-		#quota {
-			display: block;
-			position: absolute;
-			width: 99vw;
-			margin: 0 auto;
-			bottom: 110px;
-			z-index: 1;
-			background-color: RGBA(0, 0, 0, 0.6);
-			justify-content: center;
-			text-align: center;
-			color: white;
-		}
-		/* Small link back to the mode launcher (added on top of the original pen) */
-		#back-to-modes {
-			position: absolute;
-			top: 8px;
-			right: 10px;
-			z-index: 3;
-			font-family: 'Courier New', Courier, monospace;
-			font-size: 14px;
-			color: #fff;
-			background: rgba(0,0,0,0.55);
-			padding: 6px 10px;
-			border-radius: 4px;
-			text-decoration: none;
-		}
-		#back-to-modes:hover { background: rgba(0,0,0,0.8); }
-	</style></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MiniCraft — Classic Mode</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
 
-	<body>
-	<a id="back-to-modes" href="index.html">← Modes</a>
-	<canvas id="overlay" tabindex="0" width="605" height="648" style="position: absolute; top: 0px; left: 0px;"></canvas>
-	<input type="text" id="savebox" class="hidden" spellcheck="false" style="position: absolute; top: 10px; left: 10px; z-index: 1;">
-	<input type="text" id="boxcentertop" class="hidden" spellcheck="false" placeholder="Enter Save String (Optional)">
-	<div id="quota" class="hidden">1,910 / 306,447,382,118 bytes (0.00000062%) of your quota used</div>
-	<div id="onhover" class="hidden" style="bottom: 318px; left: 238px;">Multiplayer isn't possible at this time.</div>
-	<p id="savedirections" class="hidden" style="position: absolute; top: 40px; left: 10px; z-index: 1; background-color: rgba(255, 255, 255, 0.3);">
-			To save your world, copy/paste the saveString<br>
-		from this box into the Savestring (optinal)<br>
-		box on the singleplayer screen.<br>
-	  If you want to play on a diffrent device<br>
-    make sure you have the code saved.
-	</p>
-	<div class="world-select hidden" id="worlds"></div>
-	<p id="message" class="hidden" style="position: absolute; top: 10px; right: 10px; z-index: 1; text-align: right; background-color: rgba(255, 255, 255, 0.3);"></p>
-	<script>
-		// Code edits will erase the world.
-		// Place save code here to load your world. Make extra sure you got it copied so you don't paste in the wrong thing and delete your world on accident lol
-		var loadString = ""
-	</script>
-	<script type="x-shader/vertex" id="blockVertexShader">
-		attribute vec3  aVertex;
-		attribute vec2  aTexture;
-		attribute float aShadow;
-		varying vec2  vTexture;
-		varying float vShadow;
-		varying float vFog;
-		uniform mat4 uView;
-		uniform float uDist;
-		uniform vec3 uPos;
+    <a id="back-to-modes" href="index.html">← Modes</a>
 
-		void main(void) {
-			vTexture = aTexture;
-			vShadow = aShadow > 0.0 ? aShadow : 1.0;
-			gl_Position = uView * vec4( aVertex, 1.0);
+    <div id="crosshair">+</div>
 
-			float range = max(uDist / 5.0, 8.0);
-			vFog = clamp((length(uPos.xz - aVertex.xz) - uDist + range) / range, 0.0, 1.0);
-		}
-	</script>
-	<script type="x-shader/fragment" id="blockFragmentShader">
-		#ifdef GL_FRAGMENT_PRECISION_HIGH
-			precision highp float;
-		#else
-			precision mediump float;
-		#endif
+    <div id="hud">
+      <div id="fps">FPS: 0</div>
+      <div id="position">XYZ: 0, 0, 0</div>
+      <div id="view-mode">1st person</div>
+      <div id="fly-mode">Flying: OFF</div>
+    </div>
 
-		uniform sampler2D uSampler;
-		varying float vShadow;
-		varying vec2 vTexture;
-		varying float vFog;
+    <div id="bottom-hud">
+      <div id="hotbar"></div>
+    </div>
 
-		vec4 fog(vec4 color) {
-			color.r += (0.33 - color.r) * vFog;
-			color.g += (0.54 - color.g) * vFog;
-			color.b += (0.72 - color.b) * vFog;
-			return color;
-		}
+    <div id="overlay">
+      <div class="panel">
+        <h1>Classic Mode</h1>
+        <p class="subtitle">Build &amp; break · Three.js sandbox</p>
+        <button id="play-button">Click to Play</button>
+        <div class="controls">
+          <h3>Controls</h3>
+          <ul>
+            <li><b>W A S D</b> Move</li>
+            <li><b>Mouse</b> Look</li>
+            <li><b>Space</b> Jump</li>
+            <li><b>Left Click</b> Break block</li>
+            <li><b>Right Click</b> Place block</li>
+            <li><b>1 – 8 / Scroll</b> Select block</li>
+            <li><b>Double Space</b> Toggle flight</li>
+            <li><b>Shift</b> Fly down</li>
+            <li><b>F5</b> Toggle 1st / 3rd person</li>
+            <li><b>Esc</b> Pause</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 
-		void main(void){
-			vec4 color = texture2D(uSampler, vTexture);
-			gl_FragColor = fog(vec4(color.rgb * vShadow, color.a));
-			if (gl_FragColor.a == 0.0) discard;
-		}
-	</script>
-	<script type="x-shader/vertex" id="2dVertexShader">
-		attribute vec2 aVertex;
-		attribute vec2 aTexture;
-		attribute float aShadow;
-		varying vec2 vTexture;
-		varying float vShadow;
-
-		void main(void) {
-			vTexture = aTexture;
-			vShadow = aShadow;
-			gl_Position = vec4(aVertex, 0.5, 1.0);
-		}
-	</script>
-	<script type="x-shader/fragment" id="2dFragmentShader">
-		#ifdef GL_FRAGMENT_PRECISION_HIGH
-			precision highp float;
-		#else
-			precision mediump float;
-		#endif
-
-		uniform sampler2D uSampler;
-		varying vec2 vTexture;
-		varying float vShadow;
-
-		void main(void) {
-			vec4 color = texture2D(uSampler, vTexture);
-			gl_FragColor = vec4(color.rgb * vShadow, color.a);
-			if (gl_FragColor.a == 0.0) discard;
-		}
-	</script>
-	<script type="application/javascript" src="classic.js"></script>
-
-</body></html>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+  <script type="module" src="src/classic-game.js"></script>
+</body>
+</html>
