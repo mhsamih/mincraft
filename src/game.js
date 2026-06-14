@@ -242,7 +242,7 @@ document.addEventListener("mousemove", (e) => {
 
 // Mouse: left = shoot, right = place block, middle handled elsewhere.
 const raycaster = new THREE.Raycaster();
-raycaster.far = 6;
+raycaster.far = 8; // reach for placing/breaking blocks
 let leftDown = false;
 
 canvas.addEventListener("mousedown", (e) => {

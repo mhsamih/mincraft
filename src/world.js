@@ -37,6 +37,10 @@ export class World {
       inst.count = 0;
       inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       inst.frustumCulled = false;
+      // A fixed, huge bounding sphere so raycasting never early-outs (even for
+      // blocks placed far from origin, where the auto-computed sphere would be
+      // stale). Per-instance tests still give exact hits.
+      inst.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 100000);
       scene.add(inst);
       this.meshes[name] = { inst, keys: [] };
     });

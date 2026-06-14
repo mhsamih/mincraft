@@ -34,9 +34,10 @@ player.sfx = { jump: Sound.jump, step: Sound.step };
 // Targeted-block outline (wireframe cube that snaps to the block under the
 // crosshair).
 const outline = new THREE.LineSegments(
-  new THREE.EdgesGeometry(new THREE.BoxGeometry(1.001, 1.001, 1.001)),
-  new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 })
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(1.04, 1.04, 1.04)),
+  new THREE.LineBasicMaterial({ color: 0x000000, depthTest: false })
 );
+outline.renderOrder = 999;
 outline.visible = false;
 scene.add(outline);
 
@@ -160,7 +161,7 @@ document.addEventListener("mousemove", (e) => {
 });
 
 const raycaster = new THREE.Raycaster();
-raycaster.far = 7;
+raycaster.far = 8; // how far you can reach to break/place
 
 canvas.addEventListener("mousedown", (e) => {
   if (document.pointerLockElement !== canvas) return;
