@@ -9,7 +9,7 @@ import { heightAt, hash2, isCave } from "./noise.js";
 import { BLOCK_TYPES, BLOCK_NAMES } from "./textures.js";
 
 export const WORLD_RADIUS = 40; // map spans [-R, R] on X and Z
-export const WATER_LEVEL = 5;
+export const WATER_LEVEL = 20; // low ground below this is beach / water
 const MAX_INSTANCES = 60000; // per block type
 
 const _matrix = new THREE.Matrix4();
@@ -120,9 +120,22 @@ export class World {
 
   removeBlock(x, y, z) {
     const key = this.key(x, y, z);
-    if (!this.solid.has(key)) return;
+    const type = this.solid.get(key);
+    if (type === undefined) return;
+    // Bedrock (and anything flagged unbreakable) can't be mined — this is what
+    // stops you from ever digging out the bottom of the world.
+    if (BLOCK_TYPES[type] && BLOCK_TYPES[type].unbreakable) return;
     this.solid.delete(key);
     this._refreshAround(x, y, z); // self hidden; neighbours may be revealed
+  }
+
+  // Highest solid block in a column (its surface y), or -1 if the column is air.
+  // Used to drop the player / animals onto the ground.
+  surfaceY(x, z) {
+    for (let y = WORLD_RADIUS + 60; y >= 0; y--) {
+      if (this.solid.has(this.key(x, y, z))) return y;
+    }
+    return -1;
   }
 
   // --- Terrain generation ----------------------------------------------------
@@ -143,22 +156,28 @@ export class World {
     const R = WORLD_RADIUS;
     const treePositions = [];
 
-    // Pass 1: fill the logical solid map (with caves carved out).
+    // Pass 1: fill the logical solid map (with caves carved out). Every column
+    // runs from a bedrock floor at y=0 up to its surface height `h`, giving a
+    // deep underground to mine through.
+    const FLAT_H = WATER_LEVEL + 4; // superflat surface (kept above the water plane)
     for (let x = -R; x <= R; x++) {
       for (let z = -R; z <= R; z++) {
-        const h = opts.superflat ? 4 : heightAt(x, z, seed);
+        const h = opts.superflat ? FLAT_H : heightAt(x, z, seed);
         for (let y = 0; y <= h; y++) {
-          // Carve caves below the surface (keep a solid floor at y<=1).
+          // Carve caves below the surface, but never the bottom two layers so the
+          // floor stays sealed.
           if (opts.caves && !opts.superflat && y > 1 && y < h && isCave(x, y, z, seed)) {
             continue;
           }
           let type;
-          if (y === h) {
+          if (y === 0) {
+            type = "bedrock"; // unbreakable world floor
+          } else if (y === h) {
             if (opts.superflat) type = "grass";
             else if (h <= WATER_LEVEL + 1) type = "sand";
-            else if (h > 16) type = "stone";
+            else if (h > 32) type = "stone"; // bare rocky mountain peaks
             else type = "grass";
-          } else if (y > h - 3) {
+          } else if (y > h - 4) {
             type = h <= WATER_LEVEL + 1 && !opts.superflat ? "sand" : "dirt";
           } else {
             type = "stone";
@@ -169,7 +188,7 @@ export class World {
           opts.trees &&
           !opts.superflat &&
           h > WATER_LEVEL + 1 &&
-          h <= 16 &&
+          h <= 30 &&
           this.solid.has(this.key(x, h, z)) && // surface not carved by a cave
           hash2(x, z, seed ^ 0x9e37) < 0.018
         ) {
@@ -244,7 +263,7 @@ export class World {
       const c = new THREE.Mesh(cloudGeo, cloudMat);
       c.position.set(
         (Math.random() - 0.5) * R * 2.5,
-        34 + Math.random() * 6,
+        46 + Math.random() * 8, // above the new, taller mountains
         (Math.random() - 0.5) * R * 2.5
       );
       c.scale.set(1 + Math.random() * 2, 1, 1 + Math.random() * 2);

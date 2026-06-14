@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { World, WORLD_RADIUS } from "./world.js";
 import { Player } from "./player.js";
-import { Weapon, GUN } from "./weapons.js";
+import { Weapon, WEAPONS, randomWeaponKey, TRACER_RANGE } from "./weapons.js";
 import { Network } from "./network.js";
 import {
   buildCharacter,
@@ -13,7 +13,7 @@ import {
   buildNameTag,
   updateNameTag,
 } from "./character.js";
-import { BLOCK_NAMES, BLOCK_TYPES, BLOCK_ID } from "./textures.js";
+import { BLOCK_NAMES, PLACEABLE_NAMES, BLOCK_TYPES } from "./textures.js";
 import { Sound, unlockAudio } from "./sound.js";
 
 // --- Renderer / scene --------------------------------------------------------
@@ -38,7 +38,13 @@ const world = new World(scene);
 const myColor = new THREE.Color().setHSL(Math.random(), 0.6, 0.55).getHex();
 let player = new Player(scene, camera, world, myColor);
 player.sfx = { jump: Sound.jump, step: Sound.step, death: Sound.death };
-const weapon = new Weapon(scene, camera);
+const weapon = new Weapon(scene, camera, randomWeaponKey());
+
+// Hand out a fresh random weapon (called on every (re)spawn).
+function rollWeapon() {
+  weapon.setWeapon(randomWeaponKey(weapon.key));
+  updateWeaponHud();
+}
 
 // Remote players: id -> { group, hitbox, tag, target, hp, name }
 const remotes = new Map();
@@ -59,7 +65,15 @@ const hud = {
   respawn: document.getElementById("respawn"),
   view: document.getElementById("view-mode"),
   netStatus: document.getElementById("net-status"),
+  weapon: document.getElementById("weapon-name"),
 };
+
+function updateWeaponHud() {
+  if (hud.weapon) {
+    hud.weapon.textContent =
+      weapon.def.name + (weapon.def.auto ? " · auto" : " · semi");
+  }
+}
 
 // --- Networking --------------------------------------------------------------
 const net = new Network({
@@ -79,6 +93,7 @@ const net = new Network({
       if (pl.id !== net.id) addRemote(pl);
     });
     player.respawn();
+    rollWeapon();
     updateScoreboard(d.players || []);
   },
   onPlayerJoined: (pl) => addRemote(pl),
@@ -92,7 +107,7 @@ const net = new Network({
     const from = new THREE.Vector3(d.origin.x, d.origin.y, d.origin.z);
     const to = from
       .clone()
-      .add(new THREE.Vector3(d.dir.x, d.dir.y, d.dir.z).multiplyScalar(GUN.range));
+      .add(new THREE.Vector3(d.dir.x, d.dir.y, d.dir.z).multiplyScalar(TRACER_RANGE));
     weapon._spawnTracer(from, to);
   },
   onHealth: (d) => {
@@ -119,6 +134,7 @@ const net = new Network({
   onRespawn: (d) => {
     if (d.id === net.id) {
       player.respawn(d.pos);
+      rollWeapon();
       hideRespawn();
     } else {
       const r = remotes.get(d.id);
@@ -206,11 +222,16 @@ window.addEventListener("keydown", (e) => {
   keys[e.code] = true;
   if (e.code.startsWith("Digit")) {
     const n = parseInt(e.code.slice(5), 10) - 1;
-    if (n >= 0 && n < BLOCK_NAMES.length) selectSlot(n);
+    if (n >= 0 && n < PLACEABLE_NAMES.length) selectSlot(n);
   }
   if (e.code === "KeyR") {
-    if (!weapon.reloading && weapon.ammo < GUN.magSize) Sound.reload();
+    if (!weapon.reloading && weapon.ammo < weapon.def.magSize) Sound.reload();
     weapon.reload();
+  }
+  if (e.code === "KeyQ") {
+    // Re-roll to a new random weapon.
+    rollWeapon();
+    Sound.reload();
   }
   if (e.code === "F5") {
     e.preventDefault();
@@ -249,6 +270,7 @@ canvas.addEventListener("mousedown", (e) => {
   if (document.pointerLockElement !== canvas) return;
   if (e.button === 0) {
     leftDown = true;
+    fire(); // fire on the click edge (handles semi-auto weapons)
   } else if (e.button === 2) {
     placeBlock();
   }
@@ -260,7 +282,7 @@ canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 canvas.addEventListener("wheel", (e) => {
   if (document.pointerLockElement !== canvas) return;
   const dir = e.deltaY > 0 ? 1 : -1;
-  selectSlot((selectedSlot + dir + BLOCK_NAMES.length) % BLOCK_NAMES.length);
+  selectSlot((selectedSlot + dir + PLACEABLE_NAMES.length) % PLACEABLE_NAMES.length);
 });
 
 function fire() {
@@ -273,11 +295,15 @@ function fire() {
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
 
-  const hit = weapon.shoot(world, targets);
+  const hits = weapon.shoot(world, targets);
   Sound.shoot();
   net.sendShoot(origin, dir);
-  if (hit) {
-    net.sendHit(hit.id, GUN.damage);
+
+  // Sum pellet damage per victim (shotguns can hit one player several times).
+  if (hits.length) {
+    const byId = new Map();
+    for (const h of hits) byId.set(h.id, (byId.get(h.id) || 0) + h.damage);
+    byId.forEach((dmg, id) => net.sendHit(id, dmg));
     showHitmarker();
     Sound.hitMark();
   }
@@ -294,7 +320,7 @@ function placeBlock() {
   const dz = p.z + 0.5 - player.pos.z;
   const dy = p.y + 0.5 - (player.pos.y - 0.85);
   if (Math.abs(dx) < 0.8 && Math.abs(dz) < 0.8 && Math.abs(dy) < 1.2) return;
-  const type = BLOCK_NAMES[selectedSlot];
+  const type = PLACEABLE_NAMES[selectedSlot];
   world.addBlock(p.x, p.y, p.z, type);
   Sound.place();
   net.sendBlockEdit("add", p.x, p.y, p.z, selectedSlot);
@@ -313,7 +339,7 @@ function breakBlock() {
 // --- Hotbar UI ---------------------------------------------------------------
 const hotbarEl = document.getElementById("hotbar");
 function buildHotbar() {
-  BLOCK_NAMES.forEach((name, i) => {
+  PLACEABLE_NAMES.forEach((name, i) => {
     const slot = document.createElement("div");
     slot.className = "hotbar-slot";
     const sw = document.createElement("div");
@@ -373,6 +399,7 @@ function updateScoreboard(list) {
 document.getElementById("respawn-btn").addEventListener("click", () => {
   if (!net.connected) {
     player.respawn();
+    rollWeapon();
     hideRespawn();
     canvas.requestPointerLock();
   }
@@ -392,8 +419,8 @@ function animate(now) {
   const playing = document.pointerLockElement === canvas;
   if (playing && !player.dead) {
     player.update(dt, keys);
-    // Auto-fire while holding left mouse.
-    if (leftDown) fire();
+    // Auto weapons keep firing while the mouse is held; semi-auto fired on click.
+    if (leftDown && weapon.def.auto) fire();
     net.sendState(player.getState());
   } else {
     player.update(dt, {}); // keep camera/gravity sane while paused
@@ -429,7 +456,7 @@ function animate(now) {
   hud.healthFill.style.width = Math.max(0, player.hp) + "%";
   hud.ammo.textContent = weapon.reloading
     ? "RELOADING…"
-    : `${weapon.ammo} / ${GUN.magSize}`;
+    : `${weapon.ammo} / ${weapon.def.magSize}`;
 }
 
 // We separate "break" from auto-fire: left mouse shoots. Breaking blocks is done
@@ -450,5 +477,6 @@ window.addEventListener("resize", resize);
 
 // --- Boot --------------------------------------------------------------------
 buildHotbar();
+updateWeaponHud();
 resize();
 requestAnimationFrame(animate);

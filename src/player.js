@@ -219,7 +219,11 @@ export class Player {
     } else {
       const rx = Math.floor((Math.random() - 0.5) * WORLD_RADIUS);
       const rz = Math.floor((Math.random() - 0.5) * WORLD_RADIUS);
-      this.pos.set(rx + 0.5, heightAt(rx, rz, this.world.seed) + 3, rz + 0.5);
+      // Stand on the actual surface block (handles tall terrain + superflat);
+      // fall back to the height field if the world isn't generated yet.
+      const sy = this.world.surfaceY(rx, rz);
+      const groundTop = sy >= 0 ? sy + 1 : heightAt(rx, rz, this.world.seed) + 1;
+      this.pos.set(rx + 0.5, groundTop + HEIGHT + 1, rz + 0.5);
     }
   }
 

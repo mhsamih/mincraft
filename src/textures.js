@@ -70,6 +70,12 @@ const painters = {
   leaves: (x, y) => {
     return noisy([60, 130, 50], 0.4);
   },
+  bedrock: (x, y) => {
+    // Very dark, high-contrast speckle so the unbreakable floor reads clearly.
+    const v = Math.random();
+    const base = v < 0.5 ? [40, 40, 44] : [70, 70, 76];
+    return noisy(base, 0.4);
+  },
 };
 
 // Build a THREE.CanvasTexture for a painter, configured for crisp pixels.
@@ -110,6 +116,9 @@ export const BLOCK_TYPES = {
   planks: { name: "Planks", color: "#be9a60", materials: faceMaterials("planks", "planks", "planks") },
   leaves: { name: "Leaves", color: "#3c8232", materials: faceMaterials("leaves", "leaves", "leaves") },
   cobblestone: { name: "Cobble", color: "#828282", materials: faceMaterials("cobblestone", "cobblestone", "cobblestone") },
+  // Unbreakable floor block. Kept LAST so existing block ids/network indices are
+  // unchanged, and excluded from the hotbar via PLACEABLE_NAMES below.
+  bedrock: { name: "Bedrock", color: "#2a2a2e", unbreakable: true, materials: faceMaterials("bedrock", "bedrock", "bedrock") },
 };
 
 // Stable index <-> name maps so blocks can be referenced by a small integer id
@@ -117,3 +126,8 @@ export const BLOCK_TYPES = {
 export const BLOCK_NAMES = Object.keys(BLOCK_TYPES);
 export const BLOCK_ID = {};
 BLOCK_NAMES.forEach((name, i) => (BLOCK_ID[name] = i));
+
+// Blocks the player can actually select/place (everything except unbreakable
+// ones like bedrock). Indices line up with BLOCK_NAMES because the excluded
+// blocks are last, so network block ids stay compatible.
+export const PLACEABLE_NAMES = BLOCK_NAMES.filter((n) => !BLOCK_TYPES[n].unbreakable);

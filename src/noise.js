@@ -37,12 +37,15 @@ export function valueNoise(x, z, seed) {
 }
 
 // Layered octaves -> rolling hills. Returns an integer terrain height.
+// BASE_HEIGHT lifts the whole world up off y=0 so there's a deep underground to
+// mine and explore (and a bedrock floor far below your feet).
+export const BASE_HEIGHT = 16;
 export function heightAt(x, z, seed) {
   let n = 0;
-  n += valueNoise(x * 0.035, z * 0.035, seed) * 14; // broad hills
-  n += valueNoise(x * 0.09, z * 0.09, seed + 1) * 5; // medium bumps
+  n += valueNoise(x * 0.035, z * 0.035, seed) * 16; // broad hills
+  n += valueNoise(x * 0.09, z * 0.09, seed + 1) * 6; // medium bumps
   n += valueNoise(x * 0.22, z * 0.22, seed + 2) * 2; // fine detail
-  return Math.floor(n);
+  return BASE_HEIGHT + Math.floor(n);
 }
 
 // --- 3D noise for caves ------------------------------------------------------
@@ -85,7 +88,7 @@ export function isCave(x, y, z, seed) {
   const s = 0.055;
   const a = valueNoise3D(x * s, y * s * 1.4, z * s, seed);
   const b = valueNoise3D((x + 71) * s, (y + 53) * s * 1.4, (z + 17) * s, seed + 7);
-  const t = 0.07;
+  const t = 0.085; // wider band -> longer, more connected tunnels
   return Math.abs(a - 0.5) < t && Math.abs(b - 0.5) < t;
 }
 

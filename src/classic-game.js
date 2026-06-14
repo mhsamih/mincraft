@@ -6,8 +6,13 @@
 import * as THREE from "three";
 import { World } from "./world.js";
 import { Player } from "./player.js";
-import { BLOCK_NAMES, BLOCK_TYPES } from "./textures.js";
+import { Animals } from "./animals.js";
+import { PLACEABLE_NAMES, BLOCK_TYPES } from "./textures.js";
 import { Sound, unlockAudio } from "./sound.js";
+
+// Blocks the player can place (bedrock excluded). Aliased so the rest of the
+// file reads naturally.
+const BLOCK_NAMES = PLACEABLE_NAMES;
 
 // --- Renderer / scene --------------------------------------------------------
 const canvas = document.getElementById("game-canvas");
@@ -30,6 +35,9 @@ scene.add(sun);
 
 const player = new Player(scene, camera, world, 0x9acd32);
 player.sfx = { jump: Sound.jump, step: Sound.step };
+
+// Wandering wildlife (camels, cows, sheep, chickens).
+const animals = new Animals(scene, world);
 
 // Targeted-block outline (wireframe cube that snaps to the block under the
 // crosshair).
@@ -136,6 +144,7 @@ document.getElementById("create-button").addEventListener("click", () => {
     caves: opts.caves,
   });
   player.respawn();
+  animals.populate(opts.type ? 9 : 5); // fewer on superflat
   started = true;
   creation.classList.add("hidden");
   overlay.classList.remove("hidden");
@@ -221,6 +230,7 @@ function animate(now) {
   const playing = document.pointerLockElement === canvas;
   player.update(dt, playing ? keys : {});
   world.update(dt);
+  animals.update(dt);
 
   // Update the block-outline highlight.
   if (playing) {

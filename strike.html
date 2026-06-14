@@ -31,10 +31,11 @@
     <!-- Kill feed -->
     <div id="killfeed"></div>
 
-    <!-- Bottom HUD: health, ammo, hotbar -->
+    <!-- Bottom HUD: health, weapon, ammo, hotbar -->
     <div id="bottom-hud">
       <div id="health-bar"><div id="health-fill"></div></div>
       <div id="hotbar"></div>
+      <div id="weapon-name">Rifle</div>
       <div id="ammo">30 / 30</div>
     </div>
 
@@ -51,7 +52,7 @@
     <div id="overlay">
       <div class="panel">
         <h1>Strike Mode</h1>
-        <p class="subtitle">Voxel shooter · Three.js + Socket.IO multiplayer</p>
+        <p class="subtitle">Voxel shooter · random weapons · Three.js + Socket.IO multiplayer</p>
         <button id="play-button">Click to Play</button>
         <div class="controls">
           <h3>Controls</h3>
@@ -62,6 +63,7 @@
             <li><b>Shift</b> Sprint</li>
             <li><b>Left Click</b> Shoot</li>
             <li><b>R</b> Reload</li>
+            <li><b>Q</b> Swap to random weapon</li>
             <li><b>Right Click</b> Place block</li>
             <li><b>B</b> Break block</li>
             <li><b>1 – 8 / Scroll</b> Select block</li>
